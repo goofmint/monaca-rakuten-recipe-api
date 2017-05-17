@@ -1,0 +1,194 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src * data:; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'">
+  <script src="components/loader.js"></script>
+  <script src="lib/onsenui/js/onsenui.min.js"></script>
+
+  <link rel="stylesheet" href="components/loader.css">
+  <link rel="stylesheet" href="lib/onsenui/css/onsenui.css">
+  <link rel="stylesheet" href="lib/onsenui/css/onsen-css-components.css">
+  <link rel="stylesheet" href="css/style.css">
+
+  <script>
+    // 楽天APIのアプリID
+    var RAKUTEN_APP_ID = "RAKUTEN_APP_ID";
+    
+    // ページが切り替わる度に呼ばれます
+    document.addEventListener('init', function(event) {
+      var page = event.target;
+      
+      // カテゴリ一覧画面の場合
+      if (page.matches('#first-page')) {
+      	// カテゴリ一覧取得APIの設定
+				let url = `https://app.rakuten.co.jp/services/api/Recipe/CategoryList/20121121?applicationId=${RAKUTEN_APP_ID}&categoryType=large`;
+				// Ajaxで取得
+				$.ajax({
+					url: url,
+					dataType: 'jsonp'
+				})
+				.then(function(data) {
+					// 取得できたらOnsen UIのタグを生成します
+					let ary = [];
+					let categories = data.result.large;
+					for (let i = 0; i < categories.length; i++) {
+						let category = categories[i];
+						ary.push(`<ons-list-item class="category" data-id="${category.categoryId}" modifier="chevron" tappable>${category.categoryName}</ons-list-item>`);
+					}
+					// できあがったHTMLを表示します
+					$("#categories").html(ary.join(""));
+				});
+				
+				// カテゴリをタップした際のイベントを設定します
+				$("body").on("click", ".category", function(e) {
+					// data-idで指定したカテゴリのIDを取得します
+					let category_id = $(e.target).parent('ons-list-item').data("id");
+					// カテゴリ名を取得します
+					let categoryName = $(e.target).text();
+					
+					// レシピを取得するAPIのURLを設定します
+					let url = `https://app.rakuten.co.jp/services/api/Recipe/CategoryRanking/20121121?applicationId=${RAKUTEN_APP_ID}&categoryId=${category_id}`;
+					
+					// Ajaxを実行します
+					$.ajax({
+						url: url,
+						dataType: 'jsonp'
+					})
+					.then(function(data) {
+						// 取得できたら次のページに遷移します
+						// 取得したデータをdataオプションとして引き継ぎます
+						document.querySelector('#navigator').pushPage('page2.html', {
+							data: {
+								recipes: data.result,
+								title: categoryName
+							}
+						});
+					});
+				});
+				
+			// レシピ一覧画面の場合
+      } else if (page.matches('#second-page')) {
+      	// 前画面から送られているデータを取得
+				let data = event.target.data;
+				// カテゴリ名を表示
+				$("#categoryName").text(data.title);
+				// レシピ一覧のHTMLを生成
+				let ary = [];
+				let recipes = data.recipes;
+				for (let i = 0; i < recipes.length; i++) {
+					let recipe = recipes[i];
+					ary.push(`<ons-list-item class="recipe" data-recepe-index="${i}" modifier="chevron" tappable>
+						<div class="left">
+							<img class="list-item__thumbnail" src="${recipe.foodImageUrl}">
+						</div>
+						<div class="center">
+							${recipe.recipeTitle}
+						</div>
+					</ons-list-item>`);
+				}
+				// レシピ一覧を表示
+				$("#recipes").html(ary.join(""));
+				
+				// レシピをタップした際のイベント
+				$("body").on("click", ".recipe", function(e) {
+					
+					// 上から何番目をタップしたかを取得
+					let index = $(e.target).parent('ons-list-item').data('recepe-index');
+					// 次の画面へレシピ情報を引き渡し
+					document.querySelector('#navigator').pushPage('page3.html', {
+								data: {
+									recipe: recipes[index]
+								}
+					});
+				});
+			
+			// レシピ詳細画面の場合
+      } else if (page.matches('#third-page')) {
+      	// レシピ情報を表示
+      	let recipe = event.target.data.recipe;
+      	$("#recipeTitle").text(recipe.recipeTitle);
+      	$("#recipeImage").attr("src", recipe.foodImageUrl);
+      	$("#detail").html(`
+      		<ons-list-item>
+      			<div class="right">
+      				${recipe.nickname}さん
+      			</div>
+      		</ons-list-item>
+      		<ons-list-item>
+      			<div style="text-align:left">
+		      		${recipe.recipeDescription}
+		      	</div>
+      		</ons-list-item>
+      		<ons-list-header>材料</ons-list-header>
+      		<ons-list-item>
+      			<div style="text-align:left">
+	      			${recipe.recipeMaterial.join(", ")}
+      			</div>
+      		</ons-list-item>
+      		<ons-list-item>
+	      		<ons-button modifier="large" class="open">
+	      			レシピを見る
+	      		</ons-button>
+	      	</ons-list-item>
+      	`);
+      	
+      	// レシピの詳細をInAppBrowserで表示します
+      	$("body").on("click", ".open", function(e) {
+      		var ref = window.open(recipe.recipeUrl, '_blank', 'location=no&toolbar=no');
+      	});
+      	
+      }
+    });
+  </script>
+</head>
+<body>
+  <ons-navigator id="navigator" page="page1.html"></ons-navigator>
+
+  <ons-template id="page1.html">
+    <ons-page id="first-page">
+      <ons-toolbar>
+        <div class="center">カテゴリ</div>
+      </ons-toolbar>
+
+      <div class="content" style="text-align: center">
+        <ons-list id="categories">
+        </ons-list>
+      </div>
+    </ons-page>
+  </ons-template>
+
+  <ons-template id="page2.html">
+    <ons-page id="second-page">
+      <ons-toolbar>
+        <div class="left"><ons-back-button>一覧</ons-back-button></div>
+        <div class="center" id="categoryName">Page 2</div>
+      </ons-toolbar>
+
+      <div class="content" style="text-align: center">
+        <ons-list id="recipes">
+        </ons-list>
+      </div>
+    </ons-page>
+  </ons-template>
+
+  <ons-template id="page3.html">
+    <ons-page id="third-page">
+      <ons-toolbar>
+        <div class="left"><ons-back-button>レシピ</ons-back-button></div>
+        <div class="center" id="recipeTitle">Page 2</div>
+      </ons-toolbar>
+
+      <div class="content" style="text-align: center">
+      	<img src="" id="recipeImage" style="width:100%" />
+      	<div id="detail">
+	        <ons-list>
+	        </ons-list>
+	      </div>
+      </div>
+    </ons-page>
+  </ons-template>
+	
+</body>
+</html>
