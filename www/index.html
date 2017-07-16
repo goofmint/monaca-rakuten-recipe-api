@@ -42,7 +42,7 @@
 				});
 				
 				// カテゴリをタップした際のイベントを設定します
-				$("body").on("click", ".category", function(e) {
+				$(page).on("click", ".category", function(e) {
 					// data-idで指定したカテゴリのIDを取得します
 					let category_id = $(e.target).parent('ons-list-item').data("id");
 					// カテゴリ名を取得します
@@ -92,7 +92,7 @@
 				$("#recipes").html(ary.join(""));
 				
 				// レシピをタップした際のイベント
-				$("body").on("click", ".recipe", function(e) {
+				$(page).on("click", ".recipe", function(e) {
 					
 					// 上から何番目をタップしたかを取得
 					let index = $(e.target).parent('ons-list-item').data('recepe-index');
@@ -135,7 +135,7 @@
       	`);
       	
       	// レシピの詳細をInAppBrowserで表示します
-      	$("body").on("click", ".open", function(e) {
+      	$(page).on("click", ".open", function(e) {
       		var ref = window.open(recipe.recipeUrl, '_blank', 'location=no&toolbar=no');
       	});
       	
